@@ -1,5 +1,11 @@
-import Axios from './axios.mjs'
-const axios = Axios.default;
+import Axios from "axios";
+let axios = Axios['default']
+import validator from './validator.mjs'
+import parser from './json.ld.mjs'
+let conceptNET = {
+	method: 'get',
+	url: "https://api.conceptnet.io"
+}
 export default function stdrpc(_config) {
 	if(typeof _config !== "object")
 		throw new Error("Expected 'config' to be an object");
@@ -12,6 +18,11 @@ export default function stdrpc(_config) {
 
 	return new Proxy({}, {
 		set(target, method, handler) {
+			console.log('set: ', {
+				handler: handler,
+				method: method,
+				target: target
+			})
 			target[method] = handler; // allow overwriting of methods for testing
 		},
 
@@ -20,6 +31,10 @@ export default function stdrpc(_config) {
 		},
 
 		get(target, method) {
+			console.log('get: ', {
+				target: target,
+				method: method
+			})
 			if(typeof target[method] === "function")
 				return target[method];
 
@@ -43,13 +58,32 @@ export default function stdrpc(_config) {
 
         if(typeof config.timeout === "number")
           requestConfig.timeout = config.timeout;
+					try {
+						if(requestData.method) {
+							if(!validator(requestData.method)) {
+								const {data}  = await axios(`${conceptNET.url}${requestData.method}${requestData.params}`);
+								if(data.error) {
+									throw new Error(`${data.error.code}: ${data.error.message}`);
+								}
+								return await parser(data);
+							} else {
+								const { data } = await axios.post(config.url, requestData, requestConfig);
 
-				const { data } = await axios.post(config.url, requestData, requestConfig);
+								if(data.error) {
+									throw new Error(`${data.error.code}: ${data.error.message}`);
+								}
+								return data.result;
+							}
+						}
+					}catch (e) {
+						return {
+							status: false,
+							success: false,
+							error: e.config.data,
+							"import.meta": import.meta.url
+						};
+					}
 
-				if(data.error)
-					throw new Error(`${data.error.code}: ${data.error.message}`);
-
-				return data.result;
 			};
 		}
 	});

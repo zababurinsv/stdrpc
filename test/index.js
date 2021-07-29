@@ -3,7 +3,7 @@ const Koa = require("koa");
 const auth = require("koa-basic-auth");
 const json = require("koa-json");
 const bodyParser = require("koa-bodyparser");
-const stdrpc = require("../");
+const stdrpc = require("../index");
 
 describe("stdrpc", () => {
 	before(function() {
